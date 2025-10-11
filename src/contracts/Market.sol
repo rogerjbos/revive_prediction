@@ -6,46 +6,74 @@ contract PredictionMarket {
         string question;
         string[] outcomes;
         uint256[] shares;
-        uint256[] prices; // in wei per share
+        uint256[] prices; // in smallest PAS units (10^-10 PAS)
         bool resolved;
         uint256 winningOutcome;
         address creator;
         uint256 totalLiquidity;
         uint256 spread; // in basis points
+        uint256 creatorFees; // fees for market creator
         mapping(address => uint256[]) userShares; // userShares[user][outcome] = shares owned
     }
 
     mapping(uint256 => Market) public markets;
     uint256 public marketCount;
     uint256 public accumulatedFees;
+    address public owner;
 
     event MarketCreated(uint256 indexed marketId, string question, address creator);
     event SharesBought(uint256 indexed marketId, uint256 outcome, uint256 shares, address buyer);
     event SharesSold(uint256 indexed marketId, uint256 outcome, uint256 shares, address seller);
     event MarketResolved(uint256 indexed marketId, uint256 winningOutcome);
 
-    function createMarket(string memory _question, string[] memory _outcomes, uint256 _spread, uint256[] memory _initialPrices) external {
+    function createMarket(string memory _question, string[] memory _outcomes, uint256 _spread, uint256[] memory _initialLiquidity) external payable {
         require(_outcomes.length >= 2, "At least 2 outcomes required");
         require(_outcomes.length <= 5, "Maximum 5 outcomes");
-        require(_outcomes.length == _initialPrices.length, "Number of outcomes must match number of prices");
+        require(_outcomes.length == _initialLiquidity.length, "Number of outcomes must match number of liquidity");
         require(_spread >= 10 && _spread <= 1000, "Spread must be between 10 and 1000 basis points (0.1% to 10%)");
 
-        // Validate that prices sum to 1 ether (100%)
-        uint256 totalPrice = 0;
-        for (uint256 i = 0; i < _initialPrices.length; i++) {
-            totalPrice += _initialPrices[i];
+        if (owner == address(0)) {
+            owner = msg.sender;
         }
-        require(totalPrice == 1 ether, "Initial prices must sum to 1 ether (100%)");
+
+        // Calculate total liquidity
+        uint256 totalLiquidity = 0;
+        for (uint256 i = 0; i < _initialLiquidity.length; i++) {
+            totalLiquidity += _initialLiquidity[i];
+        }
+        require(msg.value == totalLiquidity * 10**8, "Must send total initial liquidity amount");
+
+        // Calculate prices: price[i] = (liquidity[i] * 1e8) / totalLiquidity  (since 1 PAS = 1e8 wei)
+        uint256[] memory prices = new uint256[](_outcomes.length);
+        for (uint256 i = 0; i < _outcomes.length; i++) {
+            prices[i] = (_initialLiquidity[i] * 10**8) / totalLiquidity;
+        }
 
         marketCount++;
         Market storage market = markets[marketCount];
         market.question = _question;
         market.outcomes = _outcomes;
+
+        // Give initial shares to creator: shares = totalLiquidity
+        uint256 sharesPerOutcome = totalLiquidity;
         market.shares = new uint256[](_outcomes.length);
-        market.prices = _initialPrices;
+        for (uint256 i = 0; i < _outcomes.length; i++) {
+            if (_initialLiquidity[i] > 0) {
+                market.shares[i] = sharesPerOutcome;
+            }
+        }
+        market.prices = prices;
         market.creator = msg.sender;
-        market.totalLiquidity = 0;
+        market.totalLiquidity = totalLiquidity; // Store in PAS units
         market.spread = _spread;
+        market.creatorFees = 0;
+
+        market.userShares[msg.sender] = new uint256[](_outcomes.length);
+        for (uint256 i = 0; i < _outcomes.length; i++) {
+            if (_initialLiquidity[i] > 0) {
+                market.userShares[msg.sender][i] = sharesPerOutcome;
+            }
+        }
 
         emit MarketCreated(marketCount, _question, msg.sender);
     }
@@ -66,7 +94,8 @@ contract PredictionMarket {
         uint256 winningOutcome,
         address creator,
         uint256 spread,
-        uint256 totalLiquidity
+        uint256 totalLiquidity,
+        uint256 creatorFees
     ) {
         Market storage market = markets[_marketId];
         return (
@@ -77,7 +106,8 @@ contract PredictionMarket {
             market.winningOutcome,
             market.creator,
             market.spread,
-            market.totalLiquidity
+            market.totalLiquidity,
+            market.creatorFees
         );
     }
 
@@ -91,7 +121,7 @@ contract PredictionMarket {
         uint256 sharesToBuy = _amount / market.prices[_outcome];
         market.shares[_outcome] += sharesToBuy;
         market.prices[_outcome] = market.prices[_outcome] * (10000 + market.spread) / 10000;
-        market.totalLiquidity += _amount;
+        market.totalLiquidity += _amount / 10**8;
 
         // Track user shares
         if (market.userShares[msg.sender].length == 0) {
@@ -113,7 +143,7 @@ contract PredictionMarket {
 
         market.shares[_outcome] -= _shares;
         market.prices[_outcome] = market.prices[_outcome] * (10000 - market.spread) / 10000;
-        market.totalLiquidity -= payout;
+        market.totalLiquidity -= payout / 10**8;
 
         // Update user shares
         market.userShares[msg.sender][_outcome] -= _shares;
@@ -167,12 +197,15 @@ contract PredictionMarket {
         uint256 totalWinningShares = market.shares[winningOutcome];
         require(totalWinningShares > 0, "No winning shares available");
 
-        uint256 payout = (userShares * market.totalLiquidity) / totalWinningShares;
+        uint256 payout = (userShares * market.totalLiquidity * 10**8) / totalWinningShares;
 
-        // Deduct 1% platform fee
-        uint256 fee = payout / 100;
-        accumulatedFees += fee;
-        payout -= fee;
+        // Deduct 2% fee: 1% to platform, 1% to market creator
+        uint256 totalFee = payout / 50; // 2% = 1/50
+        uint256 platformFee = totalFee / 2;
+        uint256 creatorFee = totalFee / 2;
+        accumulatedFees += platformFee;
+        market.creatorFees += creatorFee;
+        payout -= totalFee;
 
         // Prevent re-entrancy and multiple claims
         market.userShares[msg.sender][winningOutcome] = 0;
@@ -183,10 +216,21 @@ contract PredictionMarket {
     }
 
     function claimFees() external {
-        require(accumulatedFees > 0, "No fees to claim");
-        uint256 amount = accumulatedFees;
+        require(msg.sender == owner, "Only owner can claim protocol fees");
+        uint256 fees = accumulatedFees;
+        require(fees > 0, "No fees to claim");
         accumulatedFees = 0;
-        payable(msg.sender).transfer(amount);
+        payable(msg.sender).transfer(fees);
+    }
+
+    function claimCreatorFees(uint256 _marketId) external {
+        Market storage market = markets[_marketId];
+        require(market.resolved, "Market not resolved");
+        require(msg.sender == market.creator, "Only market creator can claim creator fees");
+        uint256 fees = market.creatorFees;
+        require(fees > 0, "No fees to claim");
+        market.creatorFees = 0;
+        payable(msg.sender).transfer(fees);
     }
 
     function removeMarket(uint256 _marketId) external {

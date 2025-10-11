@@ -10,7 +10,6 @@ import {
 import { Input, Label } from "../components/ui/Input";
 import { useMetaMask } from "../hooks/useMetaMask";
 import { useToast } from "../components/Toast";
-import { PolkadotLogo } from "../components/PolkadotLogo";
 
 // Prediction Market contract ABI
 const predictionMarketABI = [
@@ -19,11 +18,11 @@ const predictionMarketABI = [
       { internalType: "string", name: "_question", type: "string" },
       { internalType: "string[]", name: "_outcomes", type: "string[]" },
       { internalType: "uint256", name: "_spread", type: "uint256" },
-      { internalType: "uint256[]", name: "_initialPrices", type: "uint256[]" },
+      { internalType: "uint256[]", name: "_initialLiquidity", type: "uint256[]" },
     ],
     name: "createMarket",
     outputs: [],
-    stateMutability: "nonpayable",
+    stateMutability: "payable",
     type: "function",
   },
   {
@@ -45,6 +44,7 @@ const predictionMarketABI = [
       { internalType: "address", name: "creator", type: "address" },
       { internalType: "uint256", name: "spread", type: "uint256" },
       { internalType: "uint256", name: "totalLiquidity", type: "uint256" },
+      { internalType: "uint256", name: "creatorFees", type: "uint256" },
     ],
     stateMutability: "view",
     type: "function",
@@ -113,6 +113,13 @@ const predictionMarketABI = [
     type: "function",
   },
   {
+    inputs: [{ internalType: "uint256", name: "_marketId", type: "uint256" }],
+    name: "claimCreatorFees",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
     inputs: [],
     name: "accumulatedFees",
     outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
@@ -129,7 +136,7 @@ const predictionMarketABI = [
 ];
 
 // Contract address (placeholder)
-const CONTRACT_ADDRESS = '0x8Be35F3d056c138a5Ceb32C82f1Bb5Bb305e0324';
+const CONTRACT_ADDRESS = '0xdA03E64441b9e60F30cd43a03E3047007C6a4A94';
 
 // Paseo Asset Hub network
 const PASEO_ASSET_HUB = {
@@ -156,6 +163,7 @@ interface Market {
   creator: string;
   spread: number;
   totalLiquidity: number;
+  creatorFees: number;
   userShares?: number[]; // shares owned by current user
 }
 
@@ -168,7 +176,7 @@ export default function PredictionMarket() {
   const [newQuestion, setNewQuestion] = useState<string>("");
   const [newOutcomes, setNewOutcomes] = useState<string>("");
   const [newFee, setNewFee] = useState<string>("1");
-  const [initialPrices, setInitialPrices] = useState<string[]>([]);
+  const [initialLiquidity, setInitialLiquidity] = useState<string[]>([]);
   const [userBalance, setUserBalance] = useState<string>("0");
   const [userAddress, setUserAddress] = useState<string>("");
   const [accumulatedFees, setAccumulatedFees] = useState<string>("0");
@@ -183,15 +191,14 @@ export default function PredictionMarket() {
     }
   }, [connected, isCorrectNetwork]);
 
-  // Initialize initial prices when outcomes change
+  // Initialize initial liquidity when outcomes change
   useEffect(() => {
     const outcomes = newOutcomes.split(",").map(o => o.trim()).filter(o => o.length > 0);
-    if (outcomes.length > 0 && initialPrices.length !== outcomes.length) {
-      // Initialize with equal probabilities
-      const equalPrice = (100 / outcomes.length).toFixed(1);
-      setInitialPrices(outcomes.map(() => equalPrice));
+    if (outcomes.length > 0 && initialLiquidity.length !== outcomes.length) {
+      // Initialize with minimum liquidity of 10 for each outcome
+      setInitialLiquidity(outcomes.map(() => "10"));
     }
-  }, [newOutcomes, initialPrices.length]);
+  }, [newOutcomes, initialLiquidity.length]);
 
   const switchToPaseoAssetHub = async () => {
     if (!(window as any).ethereum) {
@@ -256,7 +263,7 @@ export default function PredictionMarket() {
       console.log("Test result:", testResult);
       const marketIds = await contract.getMarkets();
       const marketPromises = marketIds.map(async (id: any) => {
-        const [question, outcomes, prices, resolved, winningOutcome, creator, spread, totalLiquidity] = await contract.getMarket(id);
+        const [question, outcomes, prices, resolved, winningOutcome, creator, spread, totalLiquidity, creatorFees] = await contract.getMarket(id);
         
         // Filter out deleted markets (markets with empty question are considered deleted)
         if (question === "") {
@@ -268,12 +275,13 @@ export default function PredictionMarket() {
           id: Number(id),
           question,
           outcomes,
-          prices: prices.map((p: any) => Number(p) / 1e18), // Assuming prices in wei (PAS)
+          prices: prices.map((p: any) => Number(p) / 1e8), // Display in PAS
           resolved,
           winningOutcome: resolved ? Number(winningOutcome) : undefined,
           creator,
           spread: Number(spread),
-          totalLiquidity: Number(totalLiquidity) / 1e18,
+          totalLiquidity: Number(totalLiquidity), // Already in PAS units
+          creatorFees: Number(creatorFees) / 1e8, // Display in PAS
           userShares: userShares.map((s: any) => Number(s)),
         };
       });
@@ -283,11 +291,11 @@ export default function PredictionMarket() {
       // Get user balance
       const provider = getProvider();
       const balance = await provider.getBalance(userAddress);
-      setUserBalance(ethers.formatEther(balance));
+      setUserBalance(ethers.formatEther(balance)); // Show in ether for now
 
       // Get accumulated fees
       const fees = await contract.accumulatedFees();
-      setAccumulatedFees(ethers.formatEther(fees));
+      setAccumulatedFees((Number(fees) / 1e8).toFixed(4));
     } catch (err: any) {
       console.error("Error fetching markets:", err);
       setError(`Failed to fetch markets: ${err.message || err.toString()}`);
@@ -310,26 +318,28 @@ export default function PredictionMarket() {
       return;
     }
 
-    // Validate initial prices
-    if (initialPrices.length !== outcomes.length) {
+    // Validate initial liquidity
+    if (initialLiquidity.length !== outcomes.length) {
       showToast({
         type: "error",
-        message: "Invalid Prices",
-        description: "You must provide a price for each outcome",
+        message: "Invalid Liquidity",
+        description: "You must provide liquidity for each outcome",
       });
       return;
     }
 
-    const priceValues = initialPrices.map(p => parseFloat(p));
-    const totalPrice = priceValues.reduce((sum, price) => sum + price, 0);
-    if (Math.abs(totalPrice - 100) > 0.01) { // Allow small floating point errors
+    const liquidityValues = initialLiquidity.map(l => parseFloat(l));
+    const invalidLiquidity = liquidityValues.some(l => isNaN(l) || l < 10);
+    if (invalidLiquidity) {
       showToast({
         type: "error",
-        message: "Invalid Prices",
-        description: "Initial prices must sum to 100%",
+        message: "Invalid Liquidity",
+        description: "Each outcome must have at least 10 liquidity",
       });
       return;
     }
+
+    const totalLiquidity = liquidityValues.reduce((sum, l) => sum + l, 0);
 
     setLoading(true);
     setError("");
@@ -339,19 +349,18 @@ export default function PredictionMarket() {
       const signer = await getSigner();
       const contractWithSigner = contract.connect(signer);
       
-      // Convert percentage prices to wei (ether values)
-      const pricesInWei = priceValues.map(price => ethers.parseEther((price / 100).toString()));
-      
       // Convert percentage to basis points
       const spreadInBasisPoints = Math.round(spreadValue * 100);
       
-      const tx = await contractWithSigner.createMarket(newQuestion, outcomes, spreadInBasisPoints, pricesInWei);
+      // Send total liquidity as value
+      const weiValue = (parseFloat(totalLiquidity) * 1e8).toString();
+      const tx = await contractWithSigner.createMarket(newQuestion, outcomes, spreadInBasisPoints, liquidityValues.map(l => parseFloat(l)), { value: ethers.parseUnits(weiValue, 0) });
       await tx.wait();
       console.log("Market created");
       setNewQuestion("");
       setNewOutcomes("");
       setNewFee("1");
-      setInitialPrices([]);
+      setInitialLiquidity([]);
       setShowCreateForm(false);
       await fetchMarkets();
     } catch (err: any) {
@@ -370,7 +379,8 @@ export default function PredictionMarket() {
       const contract = await getContract();
       const signer = await getSigner();
       const contractWithSigner = contract.connect(signer);
-      const tx = await contractWithSigner.buy(marketId, outcome, ethers.parseEther(amount), { value: ethers.parseEther(amount) });
+      const weiAmount = (parseFloat(amount) * 1e8).toString();
+      const tx = await contractWithSigner.buy(marketId, outcome, ethers.parseUnits(weiAmount, 0), { value: ethers.parseUnits(weiAmount, 0) });
       await tx.wait();
       console.log("Shares bought");
       await fetchMarkets();
@@ -465,6 +475,26 @@ export default function PredictionMarket() {
     }
   };
 
+  const handleClaimCreatorFees = async (marketId: number) => {
+    setLoading(true);
+    setError("");
+    try {
+      console.log("Claiming creator fees...");
+      const contract = await getContract();
+      const signer = await getSigner();
+      const contractWithSigner = contract.connect(signer);
+      const tx = await contractWithSigner.claimCreatorFees(marketId);
+      await tx.wait();
+      console.log("Creator fees claimed");
+      await fetchMarkets();
+    } catch (err: any) {
+      console.error("Error claiming creator fees:", err);
+      setError(`Failed to claim creator fees: ${err.message || err.toString()}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleRemoveMarket = async (marketId: number) => {
     setLoading(true);
     setError("");
@@ -488,7 +518,7 @@ export default function PredictionMarket() {
   if (!connected) {
     return (
       <div className="container mx-auto px-6 py-8">
-        <Card>
+        <Card className="bg-blue-50">
           <CardHeader>
             <CardTitle>MetaMask not connected</CardTitle>
           </CardHeader>
@@ -533,23 +563,20 @@ export default function PredictionMarket() {
   return (
     <div className="container mx-auto px-6 py-8 space-y-8">
       <div className="flex justify-between items-center">
-        <div className="flex items-center gap-3">
-          <PolkadotLogo size={40} />
-          <h2 className="text-2xl font-bold text-white">Prediction Markets powered by Polkadot</h2>
-        </div>
+        <h2 className="text-2xl font-bold text-white">Prediction Markets powered by Polkadot</h2>
         <Button onClick={() => setShowCreateForm(!showCreateForm)}>
           {showCreateForm ? "Cancel" : "Create Market"}
         </Button>
       </div>
 
       {/* User Info Box */}
-      <Card>
+      <Card className="bg-blue-50">
         <CardHeader>
           <CardTitle>Your Account</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-white">
-            <p><strong>PAS Balance:</strong> {parseFloat(userBalance).toFixed(4)} PAS</p>
+          <div className="text-blue-500">
+            <p><strong>PAS Balance:</strong> {userBalance}</p>
             <Button
               size="sm"
               onClick={handleClaimFees}
@@ -563,7 +590,7 @@ export default function PredictionMarket() {
       </Card>
 
       {showCreateForm && (
-        <Card>
+        <Card className="bg-blue-50">
           <CardHeader>
             <CardTitle>Create New Market</CardTitle>
           </CardHeader>
@@ -612,38 +639,37 @@ export default function PredictionMarket() {
                 </div>
               </div>
               
-              {/* Initial Prices Section */}
-              {newOutcomes.trim() && initialPrices.length > 0 && (
+              {/* Initial Liquidity Section */}
+              {newOutcomes.trim() && initialLiquidity.length > 0 && (
                 <div>
                   <Label className="block text-sm font-medium text-gray-800 mb-2">
-                    Initial Prices (must sum to 100%)
+                    Initial Liquidity (minimum 10 per outcome)
                   </Label>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {newOutcomes.split(",").map((outcome, index) => (
                       <div key={index}>
-                        <Label htmlFor={`price-${index}`} className="text-xs text-gray-700">
-                          {outcome.trim()} (%)
+                        <Label htmlFor={`liquidity-${index}`} className="text-xs text-gray-700">
+                          {outcome.trim()} (Liquidity)
                         </Label>
                         <Input
-                          id={`price-${index}`}
+                          id={`liquidity-${index}`}
                           type="number"
-                          placeholder="0.0"
-                          value={initialPrices[index] || ""}
+                          placeholder="10"
+                          value={initialLiquidity[index] || ""}
                           onChange={(e) => {
-                            const newPrices = [...initialPrices];
-                            newPrices[index] = e.target.value;
-                            setInitialPrices(newPrices);
+                            const newLiquidity = [...initialLiquidity];
+                            newLiquidity[index] = e.target.value;
+                            setInitialLiquidity(newLiquidity);
                           }}
-                          min="0"
-                          max="100"
-                          step="0.1"
+                          min="10"
+                          step="1"
                           className="h-8 text-sm mt-1"
                         />
                       </div>
                     ))}
                   </div>
                   <p className="text-xs text-gray-600 mt-2">
-                    Current sum: {initialPrices.reduce((sum, price) => sum + (parseFloat(price) || 0), 0).toFixed(1)}%
+                    Total Liquidity: {initialLiquidity.reduce((sum, liq) => sum + (parseFloat(liq) || 0), 0).toFixed(1)}
                   </p>
                 </div>
               )}
@@ -658,7 +684,7 @@ export default function PredictionMarket() {
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {markets.map((market) => (
-          <Card key={market.id}>
+          <Card key={market.id} className="bg-blue-50">
             <CardHeader>
               <div className="flex justify-between items-center">
                 <div>
@@ -674,6 +700,15 @@ export default function PredictionMarket() {
                       disabled={loading}
                     >
                       Resolve
+                    </Button>
+                  )}
+                  {market.creator === userAddress && market.resolved && market.creatorFees > 0 && (
+                    <Button
+                      size="sm"
+                      onClick={() => handleClaimCreatorFees(market.id)}
+                      disabled={loading}
+                    >
+                      Claim Creator Fees ({market.creatorFees.toFixed(4)} PAS)
                     </Button>
                   )}
                   {market.creator === userAddress && market.resolved && (
@@ -767,3 +802,6 @@ export default function PredictionMarket() {
     </div>
   );
 }
+
+
+// forge create --rpc-url https://testnet-passet-hub-eth-rpc.polkadot.io --chain 420420422 --private-key $PASEO_PRIVATE_KEY --resolc --broadcast src/contracts/Market.sol:PredictionMarket
