@@ -111,6 +111,11 @@ contract PredictionMarket {
         );
     }
 
+    function getMarketShares(uint256 _marketId) external view returns (uint256[] memory) {
+        Market storage market = markets[_marketId];
+        return market.shares;
+    }
+
     function buy(uint256 _marketId, uint256 _outcome, uint256 _amount) external payable {
         Market storage market = markets[_marketId];
         require(!market.resolved, "Market already resolved");

@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from "../components/ui/Card";
 import { Input, Label } from "../components/ui/Input";
-import { useMetaMask } from "../hooks/useMetaMask";
+import { useMetaMaskContext } from "../providers/MetaMaskProvider";
 import { useToast } from "../components/Toast";
 
 // Prediction Market contract ABI
@@ -69,6 +69,13 @@ const predictionMarketABI = [
     name: "sell",
     outputs: [],
     stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "uint256", name: "_marketId", type: "uint256" }],
+    name: "getMarketShares",
+    outputs: [{ internalType: "uint256[]", name: "", type: "uint256[]" }],
+    stateMutability: "view",
     type: "function",
   },
   {
@@ -135,8 +142,8 @@ const predictionMarketABI = [
   },
 ];
 
-// Contract address (placeholder)
-const CONTRACT_ADDRESS = '0xdA03E64441b9e60F30cd43a03E3047007C6a4A94';
+// Contract address
+const CONTRACT_ADDRESS = '0xf0c9ae5bFd3c8B4bBA39c91EB0df17790b9E5a2F';
 
 // Paseo Asset Hub network
 const PASEO_ASSET_HUB = {
@@ -165,10 +172,11 @@ interface Market {
   totalLiquidity: number;
   creatorFees: number;
   userShares?: number[]; // shares owned by current user
+  totalShares?: number[]; // total shares outstanding for each outcome
 }
 
 export default function PredictionMarket() {
-  const { connected, chainId } = useMetaMask();
+  const { connected, chainId, accounts, currentAccount, refreshTrigger, refresh } = useMetaMaskContext();
   const [markets, setMarkets] = useState<Market[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
@@ -186,10 +194,17 @@ export default function PredictionMarket() {
   const isCorrectNetwork = chainId === PASEO_ASSET_HUB.chainId;
 
   useEffect(() => {
-    if (connected && isCorrectNetwork) {
+    console.log("Market useEffect triggered:", { connected, isCorrectNetwork, currentAccount, refreshTrigger });
+    // Clear data when account changes or disconnects
+    setMarkets([]);
+    setUserBalance("0");
+    setUserAddress("");
+    setAccumulatedFees("0");
+    
+    if (connected && isCorrectNetwork && currentAccount) {
       fetchMarkets();
     }
-  }, [connected, isCorrectNetwork]);
+  }, [connected, isCorrectNetwork, currentAccount, refreshTrigger]);
 
   // Initialize initial liquidity when outcomes change
   useEffect(() => {
@@ -254,10 +269,14 @@ export default function PredictionMarket() {
     return new ethers.Contract(CONTRACT_ADDRESS, predictionMarketABI, provider);
   };  const fetchMarkets = async () => {
     try {
-      console.log("Fetching markets...");
+      console.log("Fetching markets for account:", currentAccount);
+      if (!currentAccount) {
+        console.log("No current account, skipping fetch");
+        return;
+      }
+      
       const contract = await getContract();
-      const signer = await getSigner();
-      const userAddress = await signer.getAddress();
+      const userAddress = currentAccount;
       setUserAddress(userAddress);
       const testResult = await contract.test();
       console.log("Test result:", testResult);
@@ -271,6 +290,7 @@ export default function PredictionMarket() {
         }
         
         const userShares = await contract.getUserShares(id, userAddress);
+        const totalShares = await contract.getMarketShares(id);
         return {
           id: Number(id),
           question,
@@ -283,6 +303,7 @@ export default function PredictionMarket() {
           totalLiquidity: Number(totalLiquidity), // Already in PAS units
           creatorFees: Number(creatorFees) / 1e8, // Display in PAS
           userShares: userShares.map((s: any) => Number(s)),
+          totalShares: totalShares.map((s: any) => Number(s)),
         };
       });
       const fetchedMarkets = (await Promise.all(marketPromises)).filter(market => market !== null);
@@ -577,14 +598,47 @@ export default function PredictionMarket() {
         <CardContent>
           <div className="text-blue-500">
             <p><strong>PAS Balance:</strong> {userBalance}</p>
-            <Button
-              size="sm"
-              onClick={handleClaimFees}
-              disabled={loading || accumulatedFees === "0"}
-              className="mt-2"
-            >
-              Claim Platform Fees ({parseFloat(accumulatedFees).toFixed(4)} PAS)
-            </Button>
+            <div className="flex gap-2 mt-2">
+              <Button
+                size="sm"
+                onClick={handleClaimFees}
+                disabled={loading || accumulatedFees === "0"}
+              >
+                Claim Platform Fees ({parseFloat(accumulatedFees).toFixed(4)} PAS)
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  console.log("Manual refresh clicked");
+                  refresh();
+                }}
+              >
+                Refresh Data
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={async () => {
+                  if (window.ethereum) {
+                    try {
+                      const accs = await window.ethereum.request({ method: "eth_accounts" });
+                      console.log("Manual account check:", accs);
+                      if (accs && accs[0] !== currentAccount) {
+                        console.log("Account mismatch detected, refreshing...");
+                        refresh();
+                      } else {
+                        console.log("Account is current");
+                      }
+                    } catch (e) {
+                      console.error("Failed to check accounts:", e);
+                    }
+                  }
+                }}
+              >
+                Check Accounts
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -682,7 +736,7 @@ export default function PredictionMarket() {
         </Card>
       )}
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2">
         {markets.map((market) => (
           <Card key={market.id} className="bg-blue-50">
             <CardHeader>
@@ -692,7 +746,10 @@ export default function PredictionMarket() {
                   <p className="text-sm text-gray-600">Spread: {market.spread / 100}% | Liquidity: {market.totalLiquidity?.toFixed(4)} PAS</p>
                 </div>
                 <div className="flex gap-2">
-                  {market.creator === userAddress && !market.resolved && (
+                  {(() => {
+                    console.log(`Market ${market.id}: creator=${market.creator}, userAddress=${userAddress}, resolved=${market.resolved}, match=${market.creator.toLowerCase() === userAddress.toLowerCase()}`);
+                    return market.creator.toLowerCase() === userAddress.toLowerCase() && !market.resolved;
+                  })() && (
                     <Button
                       size="sm"
                       variant="outline"
@@ -702,7 +759,7 @@ export default function PredictionMarket() {
                       Resolve
                     </Button>
                   )}
-                  {market.creator === userAddress && market.resolved && market.creatorFees > 0 && (
+                  {market.creator.toLowerCase() === userAddress.toLowerCase() && market.resolved && market.creatorFees > 0 && (
                     <Button
                       size="sm"
                       onClick={() => handleClaimCreatorFees(market.id)}
@@ -711,7 +768,7 @@ export default function PredictionMarket() {
                       Claim Creator Fees ({market.creatorFees.toFixed(4)} PAS)
                     </Button>
                   )}
-                  {market.creator === userAddress && market.resolved && (
+                  {market.creator.toLowerCase() === userAddress.toLowerCase() && market.resolved && (
                     <Button
                       size="sm"
                       variant="destructive"
@@ -726,22 +783,29 @@ export default function PredictionMarket() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <table className="w-full text-sm">
+                <table className="w-full text-sm border-collapse">
                   <thead>
                     <tr className="border-b">
-                      <th className="text-left py-2">Outcome</th>
-                      <th className="text-left py-2">Price</th>
-                      <th className="text-left py-2">Position</th>
-                      <th className="text-left py-2">Actions</th>
+                      <th className="text-left py-3 px-2">Outcome</th>
+                      <th className="text-left py-3 px-2">Price</th>
+                      <th className="text-left py-3 px-2">Market Position</th>
+                      <th className="text-left py-3 px-2">Your Position</th>
+                      <th className="text-left py-3 px-2">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {market.outcomes.map((outcome, index) => (
                       <tr key={index} className="border-b">
-                        <td className="py-2">{outcome}</td>
-                        <td className="py-2">{market.prices[index]?.toFixed(4)} PAS</td>
-                        <td className="py-2">{market.userShares ? market.userShares[index] || 0 : 0}</td>
-                        <td className="py-2">
+                        <td className="py-3 px-2">{outcome}</td>
+                        <td className="py-3 px-2">
+                          {market.resolved 
+                            ? (index === market.winningOutcome ? "1.0000" : "0.0000")
+                            : (market.prices[index]?.toFixed(4) || "0.0000")
+                          } PAS
+                        </td>
+                        <td className="py-3 px-2">{market.totalShares ? market.totalShares[index] || 0 : 0}</td>
+                        <td className="py-3 px-2">{market.userShares ? market.userShares[index] || 0 : 0}</td>
+                        <td className="py-3 px-2">
                           {market.resolved ? (
                             index === market.winningOutcome && market.userShares && market.userShares[index] > 0 && (
                               <Button

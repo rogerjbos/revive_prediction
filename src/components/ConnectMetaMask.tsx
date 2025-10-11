@@ -6,12 +6,11 @@ import { Button } from "./ui/Button";
 
 export default function ConnectMetaMask() {
   // Use shared context from MetaMaskProvider so UI reflects a single source of truth
-  const { isInstalled, accounts, connected, connect, disconnect } =
+  const { isInstalled, accounts, connected, connect, disconnect, currentAccount, refresh } =
     useMetaMaskContext();
 
-  const address = accounts[0];
+  const address = currentAccount;
   const { setConnectedAccount, connectedAccount } = useTypink();
-  const [promptedToSwitch, setPromptedToSwitch] = useState(false);
   const [switchMessage, setSwitchMessage] = useState("");
 
   // Keep typink's connectedAccount in sync with MetaMask state
@@ -72,28 +71,50 @@ export default function ConnectMetaMask() {
                   size="sm"
                   variant="outline"
                   onClick={async () => {
+                    const previousAddress = address;
                     try {
-                      // Prompt MetaMask to request accounts (user can change account there)
+                      console.log("Attempting to switch accounts...");
+                      
+                      // Try to request permissions to trigger account selection
+                      if (window.ethereum && window.ethereum.request) {
+                        try {
+                          await window.ethereum.request({
+                            method: 'wallet_requestPermissions',
+                            params: [{ eth_accounts: {} }],
+                          });
+                        } catch (e) {
+                          console.log("wallet_requestPermissions failed, trying eth_requestAccounts");
+                        }
+                      }
+                      
+                      // Prompt MetaMask to request accounts (may not show dialog if already connected)
                       const accs = await connect();
-                      // If accounts didn't change, instruct the user to switch in the extension
-                      if (!accs || accs[0] === address) {
-                        setPromptedToSwitch(true);
-                        setSwitchMessage(
-                          "If you want to switch accounts, open MetaMask, change account there, then click Re-check."
-                        );
+                      console.log("MetaMask returned accounts:", accs);
+                      
+                      // Always refresh the data to ensure UI is up to date
+                      console.log("Calling refresh after connect");
+                      refresh();
+                      
+                      // Check if account actually changed
+                      const newAddress = accs && accs[0];
+                      if (newAddress && newAddress !== previousAddress) {
+                        console.log("Account changed from", previousAddress, "to", newAddress);
+                        setSwitchMessage("Account switched successfully!");
+                        setTimeout(() => setSwitchMessage(""), 3000);
                       } else {
-                        setPromptedToSwitch(false);
-                        setSwitchMessage("");
+                        setSwitchMessage(
+                          "To switch accounts: 1) Click the MetaMask extension, 2) Click your account avatar, 3) Select a different account, 4) Return to this app."
+                        );
                       }
                     } catch (e) {
-                      console.warn("MetaMask account change failed", e);
+                      console.warn("Account switch failed", e);
                       setSwitchMessage(
-                        "Failed to prompt MetaMask. Check console for details."
+                        "To switch accounts: Open MetaMask extension → Click account avatar → Select different account → Return here."
                       );
                     }
                   }}
                 >
-                  {promptedToSwitch ? "Re-check" : "Change"}
+                  Switch Account
                 </Button>
                 {switchMessage && (
                   <div className="text-xs text-gray-400 ml-2">
