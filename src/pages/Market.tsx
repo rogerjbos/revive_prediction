@@ -739,14 +739,16 @@ export default function PredictionMarket() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
         {markets.map((market) => (
-          <Card key={market.id} className="bg-blue-50">
+          <Card key={market.id} className="bg-blue-50 market-card">
             <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle>{market.question}</CardTitle>
-                  <p className="text-sm text-gray-600">Spread: {market.spread / 100}% | Liquidity: {market.totalLiquidity?.toFixed(4)} PAS</p>
+              <div className="market-header">
+                <div className="market-title-section">
+                  <CardTitle className="card-title">{market.question}</CardTitle>
+                  <p className="market-meta">
+                    Spread: {market.spread / 100}% | Liquidity: {market.totalLiquidity?.toFixed(4)} PAS
+                  </p>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="market-actions-header">
                   {(() => {
                     console.log(`Market ${market.id}: creator=${market.creator}, userAddress=${userAddress}, resolved=${market.resolved}, match=${market.creator.toLowerCase() === userAddress.toLowerCase()}`);
                     return market.creator.toLowerCase() === userAddress.toLowerCase() && !market.resolved;
@@ -766,7 +768,7 @@ export default function PredictionMarket() {
                       onClick={() => handleClaimCreatorFees(market.id)}
                       disabled={loading}
                     >
-                      Claim Creator Fees ({market.creatorFees.toFixed(4)} PAS)
+                      Fees ({market.creatorFees.toFixed(2)} PAS)
                     </Button>
                   )}
                   {market.creator.toLowerCase() === userAddress.toLowerCase() && market.resolved && (
@@ -784,28 +786,28 @@ export default function PredictionMarket() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <table className="w-full text-sm border-collapse">
+                <table className="w-full text-sm border-collapse market-table">
                   <thead>
                     <tr className="border-b">
                       <th className="text-left py-3 px-2">Outcome</th>
                       <th className="text-left py-3 px-2">Price</th>
-                      <th className="text-left py-3 px-2">Market Position</th>
-                      <th className="text-left py-3 px-2">Your Position</th>
-                      <th className="text-left py-3 px-2">Actions</th>
+                      <th className="text-left py-3 px-2 hide-mobile">Total</th>
+                      <th className="text-left py-3 px-2 hide-mobile">Yours</th>
+                      <th className="text-left py-3 px-2">Trade</th>
                     </tr>
                   </thead>
                   <tbody>
                     {market.outcomes.map((outcome, index) => (
                       <tr key={index} className="border-b">
-                        <td className="py-3 px-2">{outcome}</td>
+                        <td className="py-3 px-2 font-medium">{outcome}</td>
                         <td className="py-3 px-2">
                           {market.resolved 
                             ? (index === market.winningOutcome ? "1.0000" : "0.0000")
                             : (market.prices[index]?.toFixed(4) || "0.0000")
                           } PAS
                         </td>
-                        <td className="py-3 px-2">{market.totalShares ? market.totalShares[index] || 0 : 0}</td>
-                        <td className="py-3 px-2">{market.userShares ? market.userShares[index] || 0 : 0}</td>
+                        <td className="py-3 px-2 hide-mobile">{market.totalShares ? market.totalShares[index] || 0 : 0}</td>
+                        <td className="py-3 px-2 hide-mobile">{market.userShares ? market.userShares[index] || 0 : 0}</td>
                         <td className="py-3 px-2 market-actions">
                           {market.resolved ? (
                             index === market.winningOutcome && market.userShares && market.userShares[index] > 0 && (
@@ -814,7 +816,7 @@ export default function PredictionMarket() {
                                 onClick={() => handleClaimWinnings(market.id)}
                                 disabled={loading}
                               >
-                                Claim Winnings
+                                Claim
                               </Button>
                             )
                           ) : (
