@@ -793,7 +793,6 @@ export default function PredictionMarket() {
                       <th className="text-left py-3 px-2">Price</th>
                       <th className="text-left py-3 px-2 hide-mobile">Total</th>
                       <th className="text-left py-3 px-2 hide-mobile">Yours</th>
-                      <th className="text-left py-3 px-2">Status</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -810,24 +809,11 @@ export default function PredictionMarket() {
                           </td>
                           <td className="py-3 px-2 hide-mobile">{market.totalShares ? market.totalShares[index] || 0 : 0}</td>
                           <td className="py-3 px-2 hide-mobile">{market.userShares ? market.userShares[index] || 0 : 0}</td>
-                          <td className="py-3 px-2">
-                            {market.resolved ? (
-                              index === market.winningOutcome && market.userShares && market.userShares[index] > 0 && (
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleClaimWinnings(market.id)}
-                                  disabled={loading}
-                                >
-                                  Claim
-                                </Button>
-                              )
-                            ) : null}
-                          </td>
                         </tr>
                         {/* Trading buttons row */}
                         {!market.resolved && (
                           <tr className="border-b border-gray-200">
-                            <td colSpan={5} className="py-2 px-2">
+                            <td colSpan={4} className="py-2 px-2">
                               <div className="flex gap-2 justify-start">
                                 <Button
                                   size="sm"
@@ -849,6 +835,22 @@ export default function PredictionMarket() {
                                   disabled={loading || !market.userShares || market.userShares[index] === 0}
                                 >
                                   Sell
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                        {/* Claim button row for resolved markets */}
+                        {market.resolved && index === market.winningOutcome && market.userShares && market.userShares[index] > 0 && (
+                          <tr className="border-b border-gray-200">
+                            <td colSpan={4} className="py-2 px-2">
+                              <div className="flex gap-2 justify-start">
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleClaimWinnings(market.id)}
+                                  disabled={loading}
+                                >
+                                  Claim Winnings
                                 </Button>
                               </div>
                             </td>
