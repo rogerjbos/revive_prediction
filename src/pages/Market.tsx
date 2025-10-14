@@ -830,7 +830,7 @@ export default function PredictionMarket() {
                                         }
                                       }));
                                     }}
-                                    className="w-20 h-8 text-sm"
+                                    className="w-32 h-8 text-sm"
                                     min="0"
                                     step="0.1"
                                   />
@@ -868,7 +868,7 @@ export default function PredictionMarket() {
                                         }
                                       }));
                                     }}
-                                    className="w-20 h-8 text-sm"
+                                    className="w-32 h-8 text-sm"
                                     min="0"
                                     step="1"
                                   />
