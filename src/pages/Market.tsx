@@ -585,65 +585,64 @@ export default function PredictionMarket() {
 
   return (
     <div className="container mx-auto px-6 py-8 space-y-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h2 className="text-2xl font-bold text-white">Prediction Markets powered by Polkadot</h2>
-        <Button onClick={() => setShowCreateForm(!showCreateForm)}>
-          {showCreateForm ? "Cancel" : "Create Market"}
-        </Button>
-      </div>
+      {/* App Header */}
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <h2 className="text-2xl font-bold text-white">Prediction Markets powered by Polkadot</h2>
+          <Button onClick={() => setShowCreateForm(!showCreateForm)}>
+            {showCreateForm ? "Cancel" : "Create Market"}
+          </Button>
+        </div>
 
-      {/* User Info Box */}
-      <Card className="bg-blue-50">
-        <CardHeader>
-          <CardTitle>Your Balance</CardTitle>
-        </CardHeader>
-        <CardContent>
+        {/* Wallet Connection UI */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-blue-50 p-4 rounded-lg">
           <div className="text-blue-500">
             <p><strong>PAS Balance:</strong> {userBalance}</p>
-            <div className="flex flex-wrap gap-2 mt-2">
-              <Button
-                size="sm"
-                onClick={handleClaimFees}
-                disabled={loading || accumulatedFees === "0"}
-              >
-                Claim Platform Fees ({parseFloat(accumulatedFees).toFixed(4)} PAS)
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  // console.log("Manual refresh clicked");
-                  refresh();
-                }}
-              >
-                Refresh Data
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={async () => {
-                  if (window.ethereum) {
-                    try {
-                      const accs = await window.ethereum.request({ method: "eth_accounts" });
-                      console.log("Manual account check:", accs);
-                      if (accs && accs[0] !== currentAccount) {
-                        console.log("Account mismatch detected, refreshing...");
-                        refresh();
-                      } else {
-                        console.log("Account is current");
-                      }
-                    } catch (e) {
-                      console.error("Failed to check accounts:", e);
-                    }
-                  }
-                }}
-              >
-                Check Accounts
-              </Button>
-            </div>
+            <p className="text-sm text-gray-600">Address: {userAddress ? `${userAddress.slice(0, 6)}...${userAddress.slice(-4)}` : 'Not connected'}</p>
           </div>
-        </CardContent>
-      </Card>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              onClick={handleClaimFees}
+              disabled={loading || accumulatedFees === "0"}
+            >
+              Claim Platform Fees ({parseFloat(accumulatedFees).toFixed(4)} PAS)
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                // console.log("Manual refresh clicked");
+                refresh();
+              }}
+            >
+              Refresh Data
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={async () => {
+                if (window.ethereum) {
+                  try {
+                    const accs = await window.ethereum.request({ method: "eth_accounts" });
+                    console.log("Manual account check:", accs);
+                    if (accs && accs[0] !== currentAccount) {
+                      console.log("Account mismatch detected, refreshing...");
+                      refresh();
+                    } else {
+                      console.log("Account is current");
+                    }
+                  } catch (e) {
+                    console.error("Failed to check accounts:", e);
+                  }
+                }
+              }}
+            >
+              Check Accounts
+            </Button>
+          </div>
+        </div>
+      </div>
 
       {showCreateForm && (
         <Card className="bg-blue-50">
@@ -819,7 +818,7 @@ export default function PredictionMarket() {
                                 <div className="flex items-center gap-2">
                                   <Input
                                     type="number"
-                                    placeholder="Amount in PAS"
+                                    placeholder="Amount (PAS)"
                                     value={tradingInputs[`${market.id}-${index}`]?.buyAmount || ""}
                                     onChange={(e) => {
                                       const key = `${market.id}-${index}`;
@@ -831,7 +830,7 @@ export default function PredictionMarket() {
                                         }
                                       }));
                                     }}
-                                    className="w-24 h-8 text-sm"
+                                    className="w-20 h-8 text-sm"
                                     min="0"
                                     step="0.1"
                                   />
@@ -875,7 +874,6 @@ export default function PredictionMarket() {
                                   />
                                   <Button
                                     size="sm"
-                                    variant="outline"
                                     onClick={() => {
                                       const key = `${market.id}-${index}`;
                                       const shares = tradingInputs[key]?.sellShares;
