@@ -16,46 +16,71 @@ pre{background:#071022;padding:12px;border-radius:6px;overflow:auto}
 /* Mobile responsive market buttons */
 .market-buttons {
   display: flex;
-  flex-direction: row;
-  gap: 4px;
+  flex-direction: column;
+  gap: 8px;
+}
+
+@media (min-width: 768px) {
+  .market-buttons {
+    flex-direction: row;
+  }
+}
+
+/* Trading buttons row styling */
+.trading-buttons-row {
+  border-top: 2px solid #d1d5db !important;
+}
+
+.trading-buttons-row td {
+  padding: 16px 8px;
+}
+
+.trading-buttons-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+}
+
+.outcome-button-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-width: 200px;
+  max-width: 280px;
+}
+
+.outcome-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  min-width: 0;
+  max-width: 80px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Mobile adjustments for trading buttons */
+@media (max-width: 640px) {
+  .outcome-button-group {
+    min-width: 160px;
+    max-width: 200px;
+  }
+  
+  .outcome-label {
+    max-width: 60px;
+    font-size: 0.8rem;
+  }
+  
+  .trading-buttons-container {
+    gap: 8px;
+  }
 }
 
 /* Ensure table cells don't constrain button layout */
 .market-actions {
   min-width: 120px;
-}
-
-/* Trading actions row styling */
-.trading-actions-row {
-  background-color: rgba(255, 255, 255, 0.05);
-}
-
-.trading-actions-row td {
-  padding: 12px;
-}
-
-.outcome-trading-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 4px 0;
-}
-
-.outcome-label {
-  font-weight: 600;
-  min-width: 60px;
-  font-size: 0.85rem;
-}
-
-@media (max-width: 640px) {
-  .outcome-label {
-    min-width: 40px;
-    font-size: 0.8rem;
-  }
-  
-  .trading-actions-row td {
-    padding: 8px 4px;
-  }
 }
 
 /* Mobile-optimized market cards */
