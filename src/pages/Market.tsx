@@ -189,6 +189,7 @@ export default function PredictionMarket() {
   const [userBalance, setUserBalance] = useState<string>("0");
   const [userAddress, setUserAddress] = useState<string>("");
   const [accumulatedFees, setAccumulatedFees] = useState<string>("0");
+  const [tradingInputs, setTradingInputs] = useState<{[key: string]: {buyAmount: string, sellShares: string}}>({});
 
   const { showToast } = useToast();
 
@@ -814,28 +815,84 @@ export default function PredictionMarket() {
                         {!market.resolved && (
                           <tr className="border-b border-gray-200">
                             <td colSpan={4} className="py-2 px-2">
-                              <div className="flex gap-2 justify-start">
-                                <Button
-                                  size="sm"
-                                  onClick={() => {
-                                    const amount = prompt(`Buy ${outcome} - Amount in PAS:`);
-                                    if (amount) handleBuy(market.id, index, amount);
-                                  }}
-                                  disabled={loading}
-                                >
-                                  Buy
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => {
-                                    const shares = prompt(`Sell ${outcome} - Number of shares:`);
-                                    if (shares) handleSell(market.id, index, shares);
-                                  }}
-                                  disabled={loading || !market.userShares || market.userShares[index] === 0}
-                                >
-                                  Sell
-                                </Button>
+                              <div className="flex flex-col sm:flex-row gap-3">
+                                <div className="flex items-center gap-2">
+                                  <Input
+                                    type="number"
+                                    placeholder="Amount in PAS"
+                                    value={tradingInputs[`${market.id}-${index}`]?.buyAmount || ""}
+                                    onChange={(e) => {
+                                      const key = `${market.id}-${index}`;
+                                      setTradingInputs(prev => ({
+                                        ...prev,
+                                        [key]: {
+                                          ...prev[key],
+                                          buyAmount: e.target.value
+                                        }
+                                      }));
+                                    }}
+                                    className="w-24 h-8 text-sm"
+                                    min="0"
+                                    step="0.1"
+                                  />
+                                  <Button
+                                    size="sm"
+                                    onClick={() => {
+                                      const key = `${market.id}-${index}`;
+                                      const amount = tradingInputs[key]?.buyAmount;
+                                      if (amount && parseFloat(amount) > 0) {
+                                        handleBuy(market.id, index, amount);
+                                        // Clear input after successful transaction
+                                        setTradingInputs(prev => ({
+                                          ...prev,
+                                          [key]: { ...prev[key], buyAmount: "" }
+                                        }));
+                                      }
+                                    }}
+                                    disabled={loading || !tradingInputs[`${market.id}-${index}`]?.buyAmount}
+                                  >
+                                    Buy
+                                  </Button>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Input
+                                    type="number"
+                                    placeholder="Shares"
+                                    value={tradingInputs[`${market.id}-${index}`]?.sellShares || ""}
+                                    onChange={(e) => {
+                                      const key = `${market.id}-${index}`;
+                                      setTradingInputs(prev => ({
+                                        ...prev,
+                                        [key]: {
+                                          ...prev[key],
+                                          sellShares: e.target.value
+                                        }
+                                      }));
+                                    }}
+                                    className="w-20 h-8 text-sm"
+                                    min="0"
+                                    step="1"
+                                  />
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      const key = `${market.id}-${index}`;
+                                      const shares = tradingInputs[key]?.sellShares;
+                                      if (shares && parseInt(shares) > 0) {
+                                        handleSell(market.id, index, shares);
+                                        // Clear input after successful transaction
+                                        setTradingInputs(prev => ({
+                                          ...prev,
+                                          [key]: { ...prev[key], sellShares: "" }
+                                        }));
+                                      }
+                                    }}
+                                    disabled={loading || !market.userShares || market.userShares[index] === 0 || !tradingInputs[`${market.id}-${index}`]?.sellShares}
+                                  >
+                                    Sell
+                                  </Button>
+                                </div>
                               </div>
                             </td>
                           </tr>
