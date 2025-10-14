@@ -1,5 +1,5 @@
 import { ethers } from "ethers";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "../components/ui/Button";
 import {
   Card,
@@ -798,41 +798,37 @@ export default function PredictionMarket() {
                   </thead>
                   <tbody>
                     {market.outcomes.map((outcome, index) => (
-                      <tr key={index} className="border-b">
-                        <td className="py-3 px-2 font-medium">{outcome}</td>
-                        <td className="py-3 px-2">
-                          {market.resolved 
-                            ? (index === market.winningOutcome ? "1.0000" : "0.0000")
-                            : (market.prices[index]?.toFixed(4) || "0.0000")
-                          } PAS
-                        </td>
-                        <td className="py-3 px-2 hide-mobile">{market.totalShares ? market.totalShares[index] || 0 : 0}</td>
-                        <td className="py-3 px-2 hide-mobile">{market.userShares ? market.userShares[index] || 0 : 0}</td>
-                        <td className="py-3 px-2">
-                          {market.resolved ? (
-                            index === market.winningOutcome && market.userShares && market.userShares[index] > 0 && (
-                              <Button
-                                size="sm"
-                                onClick={() => handleClaimWinnings(market.id)}
-                                disabled={loading}
-                              >
-                                Claim
-                              </Button>
-                            )
-                          ) : null}
-                        </td>
-                      </tr>
-                    ))}
-                    {/* Trading buttons row */}
-                    {!market.resolved && (
-                      <tr className="trading-buttons-row">
-                        <td colSpan={5} className="py-4 px-2">
-                          <div className="trading-buttons-container">
-                            {market.outcomes.map((outcome, index) => (
-                              <div key={`buttons-${index}`} className="outcome-button-group">
-                                <span className="outcome-label">
-                                  {outcome}:
-                                </span>
+                      <React.Fragment key={`outcome-${index}`}>
+                        {/* Data row */}
+                        <tr className="border-b">
+                          <td className="py-3 px-2 font-medium">{outcome}</td>
+                          <td className="py-3 px-2">
+                            {market.resolved 
+                              ? (index === market.winningOutcome ? "1.0000" : "0.0000")
+                              : (market.prices[index]?.toFixed(4) || "0.0000")
+                            } PAS
+                          </td>
+                          <td className="py-3 px-2 hide-mobile">{market.totalShares ? market.totalShares[index] || 0 : 0}</td>
+                          <td className="py-3 px-2 hide-mobile">{market.userShares ? market.userShares[index] || 0 : 0}</td>
+                          <td className="py-3 px-2">
+                            {market.resolved ? (
+                              index === market.winningOutcome && market.userShares && market.userShares[index] > 0 && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleClaimWinnings(market.id)}
+                                  disabled={loading}
+                                >
+                                  Claim
+                                </Button>
+                              )
+                            ) : null}
+                          </td>
+                        </tr>
+                        {/* Trading buttons row */}
+                        {!market.resolved && (
+                          <tr className="border-b border-gray-200">
+                            <td colSpan={5} className="py-2 px-2">
+                              <div className="flex gap-2 justify-start">
                                 <Button
                                   size="sm"
                                   onClick={() => {
@@ -855,11 +851,11 @@ export default function PredictionMarket() {
                                   Sell
                                 </Button>
                               </div>
-                            ))}
-                          </div>
-                        </td>
-                      </tr>
-                    )}
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    ))}
                   </tbody>
                 </table>
                 {market.resolved && (
