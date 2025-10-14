@@ -1,11 +1,11 @@
 import React from 'react';
 
-interface PolkadotLogoProps {
+interface ReviveLogoProps {
   size?: number;
   className?: string;
 }
 
-export const PolkadotLogo: React.FC<PolkadotLogoProps> = ({
+export const ReviveLogo: React.FC<ReviveLogoProps> = ({
   size = 32,
   className = ""
 }) => {
@@ -22,12 +22,12 @@ export const PolkadotLogo: React.FC<PolkadotLogoProps> = ({
       <circle cx="32" cy="32" r="32" fill="#E6007A" />
 
       {/* Inner circles representing the Polkadot network */}
-      <circle cx="32" cy="16" r="5" fill="white" />
-      <circle cx="48" cy="24" r="5" fill="white" />
-      <circle cx="48" cy="40" r="5" fill="white" />
-      <circle cx="32" cy="48" r="5" fill="white" />
-      <circle cx="16" cy="40" r="5" fill="white" />
-      <circle cx="16" cy="24" r="5" fill="white" />
+      <circle cx="32" cy="16" r="5" fill="orange" />
+      <circle cx="48" cy="24" r="5" fill="orange" />
+      <circle cx="48" cy="40" r="5" fill="orange" />
+      <circle cx="32" cy="48" r="5" fill="orange" />
+      <circle cx="16" cy="40" r="5" fill="orange" />
+      <circle cx="16" cy="24" r="5" fill="orange" />
 
 
       {/* Connecting lines */}

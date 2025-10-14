@@ -11,6 +11,9 @@ import { Input, Label } from "../components/ui/Input";
 import { useMetaMaskContext } from "../providers/MetaMaskProvider";
 import { useToast } from "../components/Toast";
 
+// Contract address
+const CONTRACT_ADDRESS = '0xf0c9ae5bFd3c8B4bBA39c91EB0df17790b9E5a2F';
+
 // Prediction Market contract ABI
 const predictionMarketABI = [
   {
@@ -142,17 +145,15 @@ const predictionMarketABI = [
   },
 ];
 
-// Contract address
-const CONTRACT_ADDRESS = '0xf0c9ae5bFd3c8B4bBA39c91EB0df17790b9E5a2F';
 
-// Paseo Asset Hub network
+// Paseo Passet Hub network
 const PASEO_ASSET_HUB = {
   chainId: "0x190f1b46",
-  chainName: "Paseo Asset Hub",
+  chainName: "Paseo Passet Hub",
   nativeCurrency: {
     name: "PAS",
     symbol: "PAS",
-    decimals: 18,
+    decimals: 10,
   },
   rpcUrls: ["https://testnet-passet-hub-eth-rpc.polkadot.io"],
   blockExplorerUrls: [
@@ -269,9 +270,9 @@ export default function PredictionMarket() {
     return new ethers.Contract(CONTRACT_ADDRESS, predictionMarketABI, provider);
   };  const fetchMarkets = async () => {
     try {
-      console.log("Fetching markets for account:", currentAccount);
+      // console.log("Fetching markets for account:", currentAccount);
       if (!currentAccount) {
-        console.log("No current account, skipping fetch");
+        // console.log("No current account, skipping fetch");
         return;
       }
       
@@ -279,7 +280,7 @@ export default function PredictionMarket() {
       const userAddress = currentAccount;
       setUserAddress(userAddress);
       const testResult = await contract.test();
-      console.log("Test result:", testResult);
+      // console.log("Test result:", testResult);
       const marketIds = await contract.getMarkets();
       const marketPromises = marketIds.map(async (id: any) => {
         const [question, outcomes, prices, resolved, winningOutcome, creator, spread, totalLiquidity, creatorFees] = await contract.getMarket(id);
@@ -355,7 +356,7 @@ export default function PredictionMarket() {
       showToast({
         type: "error",
         message: "Invalid Liquidity",
-        description: "Each outcome must have at least 10 liquidity",
+        description: "Each outcome must have at least 10 PAS liquidity",
       });
       return;
     }
@@ -377,7 +378,7 @@ export default function PredictionMarket() {
       const weiValue = (parseFloat(totalLiquidity) * 1e8).toString();
       const tx = await contractWithSigner.createMarket(newQuestion, outcomes, spreadInBasisPoints, liquidityValues.map(l => parseFloat(l)), { value: ethers.parseUnits(weiValue, 0) });
       await tx.wait();
-      console.log("Market created");
+      // console.log("Market created");
       setNewQuestion("");
       setNewOutcomes("");
       setNewFee("1");
@@ -396,14 +397,14 @@ export default function PredictionMarket() {
     setLoading(true);
     setError("");
     try {
-      console.log("Buying shares...");
+      // console.log("Buying shares...");
       const contract = await getContract();
       const signer = await getSigner();
       const contractWithSigner = contract.connect(signer);
       const weiAmount = (parseFloat(amount) * 1e8).toString();
       const tx = await contractWithSigner.buy(marketId, outcome, ethers.parseUnits(weiAmount, 0), { value: ethers.parseUnits(weiAmount, 0) });
       await tx.wait();
-      console.log("Shares bought");
+      // console.log("Shares bought");
       await fetchMarkets();
     } catch (err: any) {
       console.error("Error buying shares:", err);
@@ -417,7 +418,7 @@ export default function PredictionMarket() {
     setLoading(true);
     setError("");
     try {
-      console.log("Selling shares...");
+      // console.log("Selling shares...");
       const contract = await getContract();
       const signer = await getSigner();
       const contractWithSigner = contract.connect(signer);
@@ -437,7 +438,7 @@ export default function PredictionMarket() {
     setLoading(true);
     setError("");
     try {
-      console.log("Resolving market...");
+      // console.log("Resolving market...");
       const contract = await getContract();
       const signer = await getSigner();
       const contractWithSigner = contract.connect(signer);
@@ -445,7 +446,7 @@ export default function PredictionMarket() {
       if (winningOutcome !== null) {
         const tx = await contractWithSigner.resolveMarket(marketId, parseInt(winningOutcome));
         await tx.wait();
-        console.log("Market resolved");
+        // console.log("Market resolved");
         await fetchMarkets();
       }
     } catch (err: any) {
@@ -460,13 +461,13 @@ export default function PredictionMarket() {
     setLoading(true);
     setError("");
     try {
-      console.log("Claiming winnings...");
+      // console.log("Claiming winnings...");
       const contract = await getContract();
       const signer = await getSigner();
       const contractWithSigner = contract.connect(signer);
       const tx = await contractWithSigner.claimWinnings(marketId);
       await tx.wait();
-      console.log("Winnings claimed");
+      // console.log("Winnings claimed");
       await fetchMarkets();
     } catch (err: any) {
       console.error("Error claiming winnings:", err);
@@ -480,13 +481,13 @@ export default function PredictionMarket() {
     setLoading(true);
     setError("");
     try {
-      console.log("Claiming accumulated fees...");
+      // console.log("Claiming accumulated fees...");
       const contract = await getContract();
       const signer = await getSigner();
       const contractWithSigner = contract.connect(signer);
       const tx = await contractWithSigner.claimFees();
       await tx.wait();
-      console.log("Fees claimed");
+      // console.log("Fees claimed");
       await fetchMarkets(); // Refresh the accumulated fees display
     } catch (err: any) {
       console.error("Error claiming fees:", err);
@@ -500,13 +501,13 @@ export default function PredictionMarket() {
     setLoading(true);
     setError("");
     try {
-      console.log("Claiming creator fees...");
+      // console.log("Claiming creator fees...");
       const contract = await getContract();
       const signer = await getSigner();
       const contractWithSigner = contract.connect(signer);
       const tx = await contractWithSigner.claimCreatorFees(marketId);
       await tx.wait();
-      console.log("Creator fees claimed");
+      // console.log("Creator fees claimed");
       await fetchMarkets();
     } catch (err: any) {
       console.error("Error claiming creator fees:", err);
@@ -520,13 +521,13 @@ export default function PredictionMarket() {
     setLoading(true);
     setError("");
     try {
-      console.log("Removing market...");
+      // console.log("Removing market...");
       const contract = await getContract();
       const signer = await getSigner();
       const contractWithSigner = contract.connect(signer);
       const tx = await contractWithSigner.removeMarket(marketId);
       await tx.wait();
-      console.log("Market removed");
+      // console.log("Market removed");
       await fetchMarkets();
     } catch (err: any) {
       console.error("Error removing market:", err);
@@ -545,9 +546,9 @@ export default function PredictionMarket() {
           </CardHeader>
           <CardContent>
             <p className="mb-4">
-              Please connect your MetaMask wallet to use Revive Markets.
+              Please connect your MetaMask wallet and switch to Paseo Passet Hub to use Revive Markets.
             </p>
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <Button
                 variant="gradient"
                 onClick={async () => {
@@ -583,7 +584,7 @@ export default function PredictionMarket() {
 
   return (
     <div className="container mx-auto px-6 py-8 space-y-8">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h2 className="text-2xl font-bold text-white">Prediction Markets powered by Polkadot</h2>
         <Button onClick={() => setShowCreateForm(!showCreateForm)}>
           {showCreateForm ? "Cancel" : "Create Market"}
@@ -593,12 +594,12 @@ export default function PredictionMarket() {
       {/* User Info Box */}
       <Card className="bg-blue-50">
         <CardHeader>
-          <CardTitle>Your Account</CardTitle>
+          <CardTitle>Your Balance</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-blue-500">
             <p><strong>PAS Balance:</strong> {userBalance}</p>
-            <div className="flex gap-2 mt-2">
+            <div className="flex flex-wrap gap-2 mt-2">
               <Button
                 size="sm"
                 onClick={handleClaimFees}
@@ -610,7 +611,7 @@ export default function PredictionMarket() {
                 size="sm"
                 variant="outline"
                 onClick={() => {
-                  console.log("Manual refresh clicked");
+                  // console.log("Manual refresh clicked");
                   refresh();
                 }}
               >
@@ -657,7 +658,7 @@ export default function PredictionMarket() {
                   </Label>
                   <Input
                     id="market-question"
-                    placeholder="e.g., Will it rain tomorrow?"
+                    placeholder="e.g., Will Polkadot (DOT) reach the top 20 by end of year?"
                     value={newQuestion}
                     onChange={(e) => setNewQuestion(e.target.value)}
                     className="h-9 text-sm mt-1"
@@ -697,7 +698,7 @@ export default function PredictionMarket() {
               {newOutcomes.trim() && initialLiquidity.length > 0 && (
                 <div>
                   <Label className="block text-sm font-medium text-gray-800 mb-2">
-                    Initial Liquidity (minimum 10 per outcome)
+                    Initial Liquidity (minimum 10 PAS per outcome)
                   </Label>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {newOutcomes.split(",").map((outcome, index) => (
@@ -736,7 +737,7 @@ export default function PredictionMarket() {
         </Card>
       )}
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
         {markets.map((market) => (
           <Card key={market.id} className="bg-blue-50">
             <CardHeader>
@@ -745,7 +746,7 @@ export default function PredictionMarket() {
                   <CardTitle>{market.question}</CardTitle>
                   <p className="text-sm text-gray-600">Spread: {market.spread / 100}% | Liquidity: {market.totalLiquidity?.toFixed(4)} PAS</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   {(() => {
                     console.log(`Market ${market.id}: creator=${market.creator}, userAddress=${userAddress}, resolved=${market.resolved}, match=${market.creator.toLowerCase() === userAddress.toLowerCase()}`);
                     return market.creator.toLowerCase() === userAddress.toLowerCase() && !market.resolved;
@@ -817,7 +818,7 @@ export default function PredictionMarket() {
                               </Button>
                             )
                           ) : (
-                            <div className="flex gap-2">
+                            <div className="flex flex-wrap gap-2">
                               <Button
                                 size="sm"
                                 onClick={() => {
@@ -859,13 +860,12 @@ export default function PredictionMarket() {
 
       {!isCorrectNetwork && (
         <p className="text-yellow-600">
-          Please switch to the Paseo Asset Hub network to interact with Revive Markets.
+          Please switch to the Paseo Passet Hub network to interact with Revive Markets.
         </p>
       )}
       {error && <p className="text-red-500">{error}</p>}
     </div>
   );
 }
-
 
 // forge create --rpc-url https://testnet-passet-hub-eth-rpc.polkadot.io --chain 420420422 --private-key $PASEO_PRIVATE_KEY --resolc --broadcast src/contracts/Market.sol:PredictionMarket

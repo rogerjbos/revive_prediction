@@ -1,11 +1,11 @@
 import Market from "./pages/Market";
 import ConnectWallet from "./components/ConnectWallet";
 import { NetworkSwitcher } from "./components/NetworkSwitcher";
-import { PolkadotLogo } from "./components/PolkadotLogo";
+import { ReviveLogo } from "./components/ReviveLogo";
 
 const Logo = () => (
   <div className="flex items-center gap-3">
-    <PolkadotLogo size={40} />
+    <ReviveLogo size={40} />
     <span className="text-xl font-bold text-white">Revive Markets</span>
   </div>
 );
@@ -19,6 +19,7 @@ export default function App() {
           <NetworkSwitcher />
           <ConnectWallet />
         </div>
+
       </header>
       <main>
         <Market />

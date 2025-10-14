@@ -22,9 +22,9 @@ export function useMetaMask() {
     const newConnected = Array.isArray(newAccounts) && newAccounts.length > 0;
     const newCurrentAccount = newAccounts.length > 0 ? newAccounts[0] : null;
     
-    console.log("📝 Setting accounts:", newAccounts);
-    console.log("🔗 Setting connected:", newConnected);
-    console.log("👤 Setting currentAccount:", newCurrentAccount);
+    // console.log("📝 Setting accounts:", newAccounts);
+    // console.log("🔗 Setting connected:", newConnected);
+    // console.log("👤 Setting currentAccount:", newCurrentAccount);
     
     setAccounts(newAccounts);
     setConnected(newConnected);
