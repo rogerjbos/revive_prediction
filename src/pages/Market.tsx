@@ -806,7 +806,7 @@ export default function PredictionMarket() {
                         </td>
                         <td className="py-3 px-2">{market.totalShares ? market.totalShares[index] || 0 : 0}</td>
                         <td className="py-3 px-2">{market.userShares ? market.userShares[index] || 0 : 0}</td>
-                        <td className="py-3 px-2">
+                        <td className="py-3 px-2 market-actions">
                           {market.resolved ? (
                             index === market.winningOutcome && market.userShares && market.userShares[index] > 0 && (
                               <Button
@@ -818,7 +818,7 @@ export default function PredictionMarket() {
                               </Button>
                             )
                           ) : (
-                            <div className="flex flex-wrap gap-2">
+                            <div className="market-buttons">
                               <Button
                                 size="sm"
                                 onClick={() => {

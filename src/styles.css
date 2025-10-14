@@ -12,3 +12,21 @@ header h1{margin:0 0 16px}
 .controls{display:flex;gap:12px;align-items:center}
 button{background:var(--accent);border:none;color:white;padding:8px 12px;border-radius:6px;cursor:pointer}
 pre{background:#071022;padding:12px;border-radius:6px;overflow:auto}
+
+/* Mobile responsive market buttons */
+.market-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+@media (min-width: 768px) {
+  .market-buttons {
+    flex-direction: row;
+  }
+}
+
+/* Ensure table cells don't constrain button layout */
+.market-actions {
+  min-width: 120px;
+}
