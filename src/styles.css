@@ -16,19 +16,14 @@ pre{background:#071022;padding:12px;border-radius:6px;overflow:auto}
 /* Mobile responsive market buttons */
 .market-buttons {
   display: flex;
-  flex-direction: column;
+  flex-direction: row; /* Always horizontal */
   gap: 8px;
-}
-
-@media (min-width: 768px) {
-  .market-buttons {
-    flex-direction: row;
-  }
+  justify-content: flex-start;
 }
 
 /* Ensure table cells don't constrain button layout */
 .market-actions {
-  min-width: 120px;
+  min-width: 140px;
 }
 
 /* Mobile-optimized market cards */
