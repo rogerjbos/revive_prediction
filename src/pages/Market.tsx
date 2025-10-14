@@ -793,7 +793,6 @@ export default function PredictionMarket() {
                       <th className="text-left py-3 px-2">Price</th>
                       <th className="text-left py-3 px-2 hide-mobile">Total</th>
                       <th className="text-left py-3 px-2 hide-mobile">Yours</th>
-                      <th className="text-left py-3 px-2">Trade</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -808,45 +807,71 @@ export default function PredictionMarket() {
                         </td>
                         <td className="py-3 px-2 hide-mobile">{market.totalShares ? market.totalShares[index] || 0 : 0}</td>
                         <td className="py-3 px-2 hide-mobile">{market.userShares ? market.userShares[index] || 0 : 0}</td>
-                        <td className="py-3 px-2 market-actions">
-                          {market.resolved ? (
-                            index === market.winningOutcome && market.userShares && market.userShares[index] > 0 && (
-                              <Button
-                                size="sm"
-                                onClick={() => handleClaimWinnings(market.id)}
-                                disabled={loading}
-                              >
-                                Claim
-                              </Button>
-                            )
-                          ) : (
-                            <div className="market-buttons">
-                              <Button
-                                size="sm"
-                                onClick={() => {
-                                  const amount = prompt("Amount in PAS:");
-                                  if (amount) handleBuy(market.id, index, amount);
-                                }}
-                                disabled={loading}
-                              >
-                                Buy
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  const shares = prompt("Number of shares:");
-                                  if (shares) handleSell(market.id, index, shares);
-                                }}
-                                disabled={loading || !market.userShares || market.userShares[index] === 0}
-                              >
-                                Sell
-                              </Button>
-                            </div>
-                          )}
-                        </td>
                       </tr>
                     ))}
+                                        {/* Trading Actions Row */}
+                    {!market.resolved && (
+                      <tr className="trading-actions-row">
+                        <td colSpan={4} className="py-3 px-2">
+                          <div className="flex flex-wrap gap-3 justify-center">
+                            {market.outcomes.map((outcome, index) => (
+                              <div key={`actions-${index}`} className="outcome-trading-group">
+                                <span className="outcome-label">{outcome}:</span>
+                                <div className="flex gap-1">
+                                  <Button
+                                    size="sm"
+                                    onClick={() => {
+                                      const amount = prompt(`Buy ${outcome} - Amount in PAS:`);
+                                      if (amount) handleBuy(market.id, index, amount);
+                                    }}
+                                    disabled={loading}
+                                    className="text-xs px-2 py-1"
+                                  >
+                                    Buy
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      const shares = prompt(`Sell ${outcome} - Number of shares:`);
+                                      if (shares) handleSell(market.id, index, shares);
+                                    }}
+                                    disabled={loading || !market.userShares || market.userShares[index] === 0}
+                                    className="text-xs px-2 py-1"
+                                  >
+                                    Sell
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    {/* Claim Winnings Row for Resolved Markets */}
+                    {market.resolved && (
+                      <tr className="trading-actions-row">
+                        <td colSpan={4} className="py-3 px-2">
+                          <div className="flex flex-wrap gap-3 justify-center">
+                            {market.outcomes.map((outcome, index) => (
+                              index === market.winningOutcome && market.userShares && market.userShares[index] > 0 && (
+                                <div key={`claim-${index}`} className="outcome-trading-group">
+                                  <span className="outcome-label">{outcome}:</span>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleClaimWinnings(market.id)}
+                                    disabled={loading}
+                                    className="text-xs px-2 py-1"
+                                  >
+                                    Claim
+                                  </Button>
+                                </div>
+                              )
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
                 {market.resolved && (

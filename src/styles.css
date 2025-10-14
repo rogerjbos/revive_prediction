@@ -16,14 +16,46 @@ pre{background:#071022;padding:12px;border-radius:6px;overflow:auto}
 /* Mobile responsive market buttons */
 .market-buttons {
   display: flex;
-  flex-direction: row; /* Always horizontal */
-  gap: 8px;
-  justify-content: flex-start;
+  flex-direction: row;
+  gap: 4px;
 }
 
 /* Ensure table cells don't constrain button layout */
 .market-actions {
-  min-width: 140px;
+  min-width: 120px;
+}
+
+/* Trading actions row styling */
+.trading-actions-row {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.trading-actions-row td {
+  padding: 12px;
+}
+
+.outcome-trading-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0;
+}
+
+.outcome-label {
+  font-weight: 600;
+  min-width: 60px;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 640px) {
+  .outcome-label {
+    min-width: 40px;
+    font-size: 0.8rem;
+  }
+  
+  .trading-actions-row td {
+    padding: 8px 4px;
+  }
 }
 
 /* Mobile-optimized market cards */
