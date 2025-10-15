@@ -1,27 +1,32 @@
 {
-  "name": "polkadot-ui-template",
+  "name": "revive_prediction",
   "version": "0.1.0",
   "type": "module",
-  "description": "A beautiful, production-ready React template for building Polkadot applications",
+  "description": "React app for Prediction Markets using pallet Revive",
   "repository": {
     "type": "git",
-    "url": "https://github.com/paritytech/polkadot-ui-template.git"
+    "url": "https://github.com/rogerjbos/revive_prediction"
   },
   "keywords": [
     "polkadot",
     "react",
     "typescript",
     "web3",
-    "blockchain",
-    "template",
-    "ui"
+    "prediction markets"
   ],
-  "author": "Parity Technologies",
+  "author": "Roger J. Bos",
   "license": "MIT",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:root": "VITE_BASE_PATH=/ vite build",
+    "build:revive": "VITE_BASE_PATH=/revive/ vite build",
     "preview": "vite preview",
+    "preview:root": "VITE_BASE_PATH=/ vite preview",
+    "preview:revive": "VITE_BASE_PATH=/revive/ vite preview",
+    "prod": "vite preview --host",
+    "prod:root": "VITE_BASE_PATH=/ vite preview --host",
+    "prod:revive": "VITE_BASE_PATH=/revive/ vite preview --host",
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx"
   },
   "dependencies": {

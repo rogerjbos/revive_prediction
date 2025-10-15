@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
-  base: '/',  // Changed from '/revive/' to root path
+  base: process.env.VITE_BASE_PATH || '/revive/',  // Use env var or default to /revive/
   plugins: [
     react(),
     tailwindcss(),
